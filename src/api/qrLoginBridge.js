@@ -14,25 +14,24 @@ let currentApiInstance = null;
  */
 async function initModule() {
   if (!qrLoginModule) {
+    // 在浏览器环境中，我们无法直接require Node.js模块
+    // 所以这里需要通过 Electron 的 ipcRenderer 或者其他方式
+    if (!process.env.IS_ELECTRON) {
+      throw new Error('自定义二维码登录仅支持 Electron 环境');
+    }
+
     try {
-      // 在浏览器环境中，我们无法直接require Node.js模块
-      // 所以这里需要通过 Electron 的 ipcRenderer 或者其他方式
-      if (process.env.IS_ELECTRON) {
-        // Electron 环境
-        const { ipcRenderer } = require('electron');
-        qrLoginModule = {
-          generateQRCode: () => ipcRenderer.invoke('qr-login-generate'),
-          checkStatus: (apiData, unikey) =>
-            ipcRenderer.invoke('qr-login-check', { apiData, unikey }),
-        };
-      } else {
-        // 浏览器环境，使用原来的 API
-        console.warn('[QR Bridge] 非 Electron 环境，将使用默认 API');
-        qrLoginModule = null;
-      }
+      // Electron 环境
+      const { ipcRenderer } = require('electron');
+      qrLoginModule = {
+        generateQRCode: () => ipcRenderer.invoke('qr-login-generate'),
+        checkStatus: (apiData, unikey) =>
+          ipcRenderer.invoke('qr-login-check', { apiData, unikey }),
+      };
+      console.log('[QR Bridge] 自定义二维码登录模块初始化成功');
     } catch (error) {
       console.error('[QR Bridge] 初始化失败:', error);
-      qrLoginModule = null;
+      throw new Error('自定义二维码登录模块初始化失败: ' + error.message);
     }
   }
   return qrLoginModule;
@@ -45,21 +44,20 @@ async function initModule() {
 export async function generateQRCodeForLogin() {
   const module = await initModule();
 
-  if (module && module.generateQRCode) {
-    const result = await module.generateQRCode();
-    if (result.success) {
-      // 保存 API 实例数据用于后续检查
-      currentApiInstance = result.data.apiData;
-    }
-    return result;
+  if (!module || !module.generateQRCode) {
+    throw new Error('自定义二维码登录模块未初始化或不可用');
   }
 
-  // 回退到默认实现
-  return {
-    success: false,
-    useDefault: true,
-    error: '使用默认 API',
-  };
+  const result = await module.generateQRCode();
+
+  if (!result.success) {
+    throw new Error(result.error || '生成二维码失败');
+  }
+
+  // 保存 API 实例数据用于后续检查
+  currentApiInstance = result.data.apiData;
+
+  return result;
 }
 
 /**
@@ -71,18 +69,13 @@ export async function generateQRCodeForLogin() {
 export async function checkQRCodeStatus(unikey, apiData) {
   const module = await initModule();
 
-  if (module && module.checkStatus) {
-    // 使用传入的 apiData 或当前缓存的实例
-    const dataToUse = apiData || currentApiInstance;
-    return await module.checkStatus(dataToUse, unikey);
+  if (!module || !module.checkStatus) {
+    throw new Error('自定义二维码登录模块未初始化或不可用');
   }
 
-  // 回退到默认实现
-  return {
-    code: 0,
-    message: '使用默认 API',
-    useDefault: true,
-  };
+  // 使用传入的 apiData 或当前缓存的实例
+  const dataToUse = apiData || currentApiInstance;
+  return await module.checkStatus(dataToUse, unikey);
 }
 
 /**

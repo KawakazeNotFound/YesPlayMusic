@@ -112,18 +112,12 @@
 </template>
 
 <script>
-import QRCode from 'qrcode';
 import md5 from 'crypto-js/md5';
 import NProgress from 'nprogress';
 import { mapMutations } from 'vuex';
 import { setCookies } from '@/utils/auth';
 import nativeAlert from '@/utils/nativeAlert';
-import {
-  loginWithPhone,
-  loginWithEmail,
-  loginQrCodeKey,
-  loginQrCodeCheck,
-} from '@/api/auth';
+import { loginWithPhone, loginWithEmail } from '@/api/auth';
 import {
   generateQRCodeForLogin,
   checkQRCodeStatus,
@@ -243,13 +237,14 @@ export default {
       }
     },
     getQrCodeKey() {
-      // 尝试使用自定义二维码登录接口
+      // 强制使用自定义二维码登录接口，不回退到默认 API
+      console.log('[Login] 使用自定义二维码登录接口');
+      this.useCustomQRLogin = true;
+
       return generateQRCodeForLogin()
         .then(result => {
-          if (result.success && !result.useDefault) {
-            // 成功使用自定义接口
-            console.log('[Login] 使用自定义二维码登录接口');
-            this.useCustomQRLogin = true;
+          if (result.success) {
+            console.log('[Login] 二维码生成成功');
             this.qrCodeKey = result.data.unikey;
             this.qrCodeSvg = result.data.qrcodeSvg;
             this.qrApiData = result.data.apiData;
@@ -257,98 +252,26 @@ export default {
             this.checkQrCodeLogin();
             return result;
           } else {
-            // 回退到默认 API
-            console.log('[Login] 回退到默认二维码登录 API');
-            this.useCustomQRLogin = false;
-            return this.getQrCodeKeyDefault();
+            throw new Error(result.error || '生成二维码失败');
           }
         })
         .catch(error => {
-          console.error('[Login] 自定义二维码登录失败，回退到默认 API:', error);
-          this.useCustomQRLogin = false;
-          return this.getQrCodeKeyDefault();
+          console.error('[Login] 自定义二维码登录失败:', error);
+          NProgress.done();
+          nativeAlert('二维码登录功能暂不可用: ' + error.message);
+          throw error;
         });
-    },
-    getQrCodeKeyDefault() {
-      // 默认的二维码生成方法
-      return loginQrCodeKey().then(result => {
-        if (result.code === 200) {
-          this.qrCodeKey = result.data.unikey;
-          QRCode.toString(
-            `https://music.163.com/login?codekey=${this.qrCodeKey}`,
-            {
-              width: 192,
-              margin: 0,
-              color: {
-                dark: '#335eea',
-                light: '#00000000',
-              },
-              type: 'svg',
-            }
-          )
-            .then(svg => {
-              this.qrCodeSvg = `data:image/svg+xml;utf8,${encodeURIComponent(
-                svg
-              )}`;
-            })
-            .catch(err => {
-              console.error(err);
-            })
-            .finally(() => {
-              NProgress.done();
-            });
-        }
-        this.checkQrCodeLogin();
-      });
     },
     checkQrCodeLogin() {
       // 清除二维码检测
       clearInterval(this.qrCodeCheckInterval);
 
-      if (this.useCustomQRLogin) {
-        // 使用自定义二维码登录检查
-        this.qrCodeCheckInterval = setInterval(() => {
-          if (this.qrCodeKey === '') return;
+      // 强制使用自定义二维码登录检查
+      this.qrCodeCheckInterval = setInterval(() => {
+        if (this.qrCodeKey === '') return;
 
-          checkQRCodeStatus(this.qrCodeKey, this.qrApiData)
-            .then(result => {
-              if (result.code === 800) {
-                this.getQrCodeKey(); // 重新生成QrCode
-                this.qrCodeInformation = '二维码已失效，请重新扫码';
-              } else if (result.code === 802) {
-                this.qrCodeInformation = '扫描成功，请在手机上确认登录';
-              } else if (result.code === 801) {
-                this.qrCodeInformation = '打开网易云音乐APP扫码登录';
-              } else if (result.code === 803) {
-                clearInterval(this.qrCodeCheckInterval);
-                this.qrCodeInformation = '登录成功，请稍等...';
-
-                // 处理自定义登录成功的响应
-                const loginResult = {
-                  code: 200,
-                  cookie:
-                    result.cookieString ||
-                    result.cookies
-                      ?.map(c => `${c.name}=${c.value}`)
-                      .join('; ') ||
-                    '',
-                };
-
-                console.log('[Login] 自定义二维码登录成功');
-                console.log('[Login] Cookies:', result.keyCookies);
-
-                this.handleLoginResponse(loginResult);
-              }
-            })
-            .catch(error => {
-              console.error('[Login] 检查二维码状态失败:', error);
-            });
-        }, 1000);
-      } else {
-        // 使用默认二维码登录检查
-        this.qrCodeCheckInterval = setInterval(() => {
-          if (this.qrCodeKey === '') return;
-          loginQrCodeCheck(this.qrCodeKey).then(result => {
+        checkQRCodeStatus(this.qrCodeKey, this.qrApiData)
+          .then(result => {
             if (result.code === 800) {
               this.getQrCodeKey(); // 重新生成QrCode
               this.qrCodeInformation = '二维码已失效，请重新扫码';
@@ -359,13 +282,28 @@ export default {
             } else if (result.code === 803) {
               clearInterval(this.qrCodeCheckInterval);
               this.qrCodeInformation = '登录成功，请稍等...';
-              result.code = 200;
-              result.cookie = result.cookie.replaceAll(' HTTPOnly', '');
-              this.handleLoginResponse(result);
+
+              // 处理自定义登录成功的响应
+              const loginResult = {
+                code: 200,
+                cookie:
+                  result.cookieString ||
+                  result.cookies?.map(c => `${c.name}=${c.value}`).join('; ') ||
+                  '',
+              };
+
+              console.log('[Login] 自定义二维码登录成功');
+              console.log('[Login] Cookies:', result.keyCookies);
+
+              this.handleLoginResponse(loginResult);
             }
+          })
+          .catch(error => {
+            console.error('[Login] 检查二维码状态失败:', error);
+            clearInterval(this.qrCodeCheckInterval);
+            this.qrCodeInformation = '登录检查失败: ' + error.message;
           });
-        }, 1000);
-      }
+      }, 1000);
     },
     changeMode(mode) {
       this.mode = mode;

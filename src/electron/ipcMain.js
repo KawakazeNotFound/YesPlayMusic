@@ -273,7 +273,7 @@ export function initIpcMain(win, store, trayEventEmitter) {
     );
   });
 
-  ipcMain.on('removeProxy', (event, arg) => {
+  ipcMain.on('removeProxy', () => {
     log('removeProxy');
     win.webContents.session.setProxy({});
     store.set('proxy', '');
@@ -329,11 +329,9 @@ export function initIpcMain(win, store, trayEventEmitter) {
     try {
       log('qr-login-generate: 生成二维码');
 
-      // 动态加载 qr-login-test 模块
+      // 动态加载 qr-login 模块
       if (!qrLoginModuleCache) {
-        const path = require('path');
-        const modulePath = path.join(__dirname, '../../test/qr-login-test.js');
-        qrLoginModuleCache = require(modulePath);
+        qrLoginModuleCache = require('../utils/qrLogin');
       }
 
       const result = await qrLoginModuleCache.generateQRCodeForLogin();
@@ -374,9 +372,7 @@ export function initIpcMain(win, store, trayEventEmitter) {
       log('qr-login-check: 检查二维码状态');
 
       if (!qrLoginModuleCache) {
-        const path = require('path');
-        const modulePath = path.join(__dirname, '../../test/qr-login-test.js');
-        qrLoginModuleCache = require(modulePath);
+        qrLoginModuleCache = require('../utils/qrLogin');
       }
 
       // 恢复 API 实例
