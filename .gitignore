@@ -1,7 +1,7 @@
 .DS_Store
 node_modules
 /dist
-
+/test/login-success.json
 # local env files
 .env
 .env.local

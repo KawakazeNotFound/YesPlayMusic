@@ -1,0 +1,38 @@
+{
+  "name": "netease-qr-login-test",
+  "version": "1.0.0",
+  "description": "网易云音乐二维码登录测试工具，严格按照 go-musicfox 逻辑实现",
+  "main": "qr-login-test.js",
+  "scripts": {
+    "start": "node qr-login-test.js",
+    "test": "node qr-login-test.js",
+    "liked-music": "node qr-login-test.js --liked-music"
+  },
+  "keywords": [
+    "netease",
+    "music",
+    "qr-login",
+    "163music",
+    "api",
+    "test"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "crypto-js": "^4.2.0",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KawakazeNotFound/YesPlayMusic.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KawakazeNotFound/YesPlayMusic/issues"
+  },
+  "homepage": "https://github.com/KawakazeNotFound/YesPlayMusic#readme"
+}
