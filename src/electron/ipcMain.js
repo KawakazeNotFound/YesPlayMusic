@@ -328,7 +328,7 @@ export function initIpcMain(win, store, trayEventEmitter) {
   ipcMain.handle('qr-login-generate', async () => {
     try {
       log('qr-login-generate: 生成二维码');
-      
+
       // 动态加载 qr-login-test 模块
       if (!qrLoginModuleCache) {
         const path = require('path');
@@ -337,14 +337,14 @@ export function initIpcMain(win, store, trayEventEmitter) {
       }
 
       const result = await qrLoginModuleCache.generateQRCodeForLogin();
-      
+
       if (result.success && result.data) {
         // 序列化 API 实例的关键数据
         const apiInstance = result.data.api;
         qrApiInstanceCache = {
           sDeviceId: apiInstance.sDeviceId,
           globalCookies: apiInstance.globalCookies,
-          uniKey: apiInstance.uniKey
+          uniKey: apiInstance.uniKey,
         };
 
         // 返回不包含 api 实例的数据
@@ -354,8 +354,8 @@ export function initIpcMain(win, store, trayEventEmitter) {
             unikey: result.data.unikey,
             qrcodeUrl: result.data.qrcodeUrl,
             qrcodeSvg: result.data.qrcodeSvg,
-            apiData: qrApiInstanceCache
-          }
+            apiData: qrApiInstanceCache,
+          },
         };
       }
 
@@ -364,7 +364,7 @@ export function initIpcMain(win, store, trayEventEmitter) {
       log(`qr-login-generate error: ${error.message}`);
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   });
@@ -388,13 +388,13 @@ export function initIpcMain(win, store, trayEventEmitter) {
       }
 
       const result = await qrLoginModuleCache.checkQRCodeStatus(api, unikey);
-      
+
       // 更新缓存的 API 实例数据
       if (result.code === 803 && result.cookies) {
         qrApiInstanceCache = {
           sDeviceId: api.sDeviceId,
           globalCookies: api.globalCookies,
-          uniKey: api.uniKey
+          uniKey: api.uniKey,
         };
       }
 
@@ -404,7 +404,7 @@ export function initIpcMain(win, store, trayEventEmitter) {
       return {
         code: 0,
         message: '检查状态失败: ' + error.message,
-        error: error.message
+        error: error.message,
       };
     }
   });

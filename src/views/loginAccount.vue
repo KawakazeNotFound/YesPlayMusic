@@ -304,12 +304,12 @@ export default {
     checkQrCodeLogin() {
       // 清除二维码检测
       clearInterval(this.qrCodeCheckInterval);
-      
+
       if (this.useCustomQRLogin) {
         // 使用自定义二维码登录检查
         this.qrCodeCheckInterval = setInterval(() => {
           if (this.qrCodeKey === '') return;
-          
+
           checkQRCodeStatus(this.qrCodeKey, this.qrApiData)
             .then(result => {
               if (result.code === 800) {
@@ -322,16 +322,21 @@ export default {
               } else if (result.code === 803) {
                 clearInterval(this.qrCodeCheckInterval);
                 this.qrCodeInformation = '登录成功，请稍等...';
-                
+
                 // 处理自定义登录成功的响应
                 const loginResult = {
                   code: 200,
-                  cookie: result.cookieString || result.cookies?.map(c => `${c.name}=${c.value}`).join('; ') || ''
+                  cookie:
+                    result.cookieString ||
+                    result.cookies
+                      ?.map(c => `${c.name}=${c.value}`)
+                      .join('; ') ||
+                    '',
                 };
-                
+
                 console.log('[Login] 自定义二维码登录成功');
                 console.log('[Login] Cookies:', result.keyCookies);
-                
+
                 this.handleLoginResponse(loginResult);
               }
             })

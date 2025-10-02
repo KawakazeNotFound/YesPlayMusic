@@ -22,8 +22,8 @@ async function initModule() {
         const { ipcRenderer } = require('electron');
         qrLoginModule = {
           generateQRCode: () => ipcRenderer.invoke('qr-login-generate'),
-          checkStatus: (apiData, unikey) => 
-            ipcRenderer.invoke('qr-login-check', { apiData, unikey })
+          checkStatus: (apiData, unikey) =>
+            ipcRenderer.invoke('qr-login-check', { apiData, unikey }),
         };
       } else {
         // 浏览器环境，使用原来的 API
@@ -44,7 +44,7 @@ async function initModule() {
  */
 export async function generateQRCodeForLogin() {
   const module = await initModule();
-  
+
   if (module && module.generateQRCode) {
     const result = await module.generateQRCode();
     if (result.success) {
@@ -53,12 +53,12 @@ export async function generateQRCodeForLogin() {
     }
     return result;
   }
-  
+
   // 回退到默认实现
   return {
     success: false,
     useDefault: true,
-    error: '使用默认 API'
+    error: '使用默认 API',
   };
 }
 
@@ -70,18 +70,18 @@ export async function generateQRCodeForLogin() {
  */
 export async function checkQRCodeStatus(unikey, apiData) {
   const module = await initModule();
-  
+
   if (module && module.checkStatus) {
     // 使用传入的 apiData 或当前缓存的实例
     const dataToUse = apiData || currentApiInstance;
     return await module.checkStatus(dataToUse, unikey);
   }
-  
+
   // 回退到默认实现
   return {
     code: 0,
     message: '使用默认 API',
-    useDefault: true
+    useDefault: true,
   };
 }
 
