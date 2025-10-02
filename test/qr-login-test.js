@@ -682,6 +682,101 @@ async function testUserLikedMusic() {
     }
 }
 
+// 导出接口供主程序调用
+async function generateQRCodeForLogin() {
+    const api = new NeteaseAPITest();
+    
+    try {
+        // 1. 获取二维码
+        console.log('[QR LOGIN API] 获取二维码...');
+        const qrResult = await api.getQRKey();
+        
+        // 2. 生成二维码 SVG
+        const qrcodeSvg = await QRCode.toString(qrResult.qrcodeUrl, {
+            type: 'svg',
+            width: 192,
+            margin: 0,
+            color: {
+                dark: '#335eea',
+                light: '#00000000'
+            }
+        });
+        
+        console.log('[QR LOGIN API] 二维码生成成功');
+        
+        return {
+            success: true,
+            data: {
+                unikey: qrResult.unikey,
+                qrcodeUrl: qrResult.qrcodeUrl,
+                qrcodeSvg: `data:image/svg+xml;utf8,${encodeURIComponent(qrcodeSvg)}`,
+                api: api // 返回 api 实例用于后续检查状态
+            }
+        };
+    } catch (error) {
+        console.error('[QR LOGIN API] 生成二维码失败:', error.message);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+async function checkQRCodeStatus(api, unikey) {
+    try {
+        // 设置 uniKey
+        if (unikey && !api.uniKey) {
+            api.uniKey = unikey;
+        }
+        
+        const status = await api.checkQRStatus();
+        
+        let result = {
+            code: status.code,
+            message: status.message || ''
+        };
+        
+        // 如果登录成功（code === 803），返回必要的 cookies
+        if (status.code === 803) {
+            result.cookies = api.globalCookies;
+            result.cookieString = api.globalCookies.map(c => `${c.name}=${c.value}`).join('; ');
+            
+            // 提取关键 cookies
+            const musicU = api.globalCookies.find(c => c.name === 'MUSIC_U');
+            const csrf = api.globalCookies.find(c => c.name === '__csrf');
+            const musicAT = api.globalCookies.find(c => c.name === 'MUSIC_A_T');
+            const musicRT = api.globalCookies.find(c => c.name === 'MUSIC_R_T');
+            
+            result.keyCookies = {
+                MUSIC_U: musicU ? musicU.value : '',
+                __csrf: csrf ? csrf.value : '',
+                MUSIC_A_T: musicAT ? musicAT.value : '',
+                MUSIC_R_T: musicRT ? musicRT.value : ''
+            };
+            
+            console.log('[QR LOGIN API] 登录成功，提取关键cookies');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('[QR LOGIN API] 检查状态失败:', error.message);
+        return {
+            code: 0,
+            message: '检查状态失败: ' + error.message,
+            error: error.message
+        };
+    }
+}
+
+// 导出模块
+module.exports = {
+    NeteaseAPITest,
+    generateQRCodeForLogin,
+    checkQRCodeStatus,
+    testQRLogin,
+    testUserLikedMusic
+};
+
 // 运行测试
 if (require.main === module) {
     // 检查命令行参数

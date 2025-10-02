@@ -124,6 +124,11 @@ import {
   loginQrCodeKey,
   loginQrCodeCheck,
 } from '@/api/auth';
+import {
+  generateQRCodeForLogin,
+  checkQRCodeStatus,
+  clearApiInstance,
+} from '@/api/qrLoginBridge';
 
 export default {
   name: 'Login',
@@ -141,6 +146,8 @@ export default {
       qrCodeSvg: '',
       qrCodeCheckInterval: null,
       qrCodeInformation: '打开网易云音乐APP扫码登录',
+      useCustomQRLogin: false, // 是否使用自定义二维码登录
+      qrApiData: null, // 存储 API 实例数据
     };
   },
   computed: {
@@ -156,6 +163,9 @@ export default {
   },
   beforeDestroy() {
     clearInterval(this.qrCodeCheckInterval);
+    if (this.useCustomQRLogin) {
+      clearApiInstance();
+    }
   },
   methods: {
     ...mapMutations(['updateData']),
@@ -233,6 +243,34 @@ export default {
       }
     },
     getQrCodeKey() {
+      // 尝试使用自定义二维码登录接口
+      return generateQRCodeForLogin()
+        .then(result => {
+          if (result.success && !result.useDefault) {
+            // 成功使用自定义接口
+            console.log('[Login] 使用自定义二维码登录接口');
+            this.useCustomQRLogin = true;
+            this.qrCodeKey = result.data.unikey;
+            this.qrCodeSvg = result.data.qrcodeSvg;
+            this.qrApiData = result.data.apiData;
+            NProgress.done();
+            this.checkQrCodeLogin();
+            return result;
+          } else {
+            // 回退到默认 API
+            console.log('[Login] 回退到默认二维码登录 API');
+            this.useCustomQRLogin = false;
+            return this.getQrCodeKeyDefault();
+          }
+        })
+        .catch(error => {
+          console.error('[Login] 自定义二维码登录失败，回退到默认 API:', error);
+          this.useCustomQRLogin = false;
+          return this.getQrCodeKeyDefault();
+        });
+    },
+    getQrCodeKeyDefault() {
+      // 默认的二维码生成方法
       return loginQrCodeKey().then(result => {
         if (result.code === 200) {
           this.qrCodeKey = result.data.unikey;
@@ -266,25 +304,63 @@ export default {
     checkQrCodeLogin() {
       // 清除二维码检测
       clearInterval(this.qrCodeCheckInterval);
-      this.qrCodeCheckInterval = setInterval(() => {
-        if (this.qrCodeKey === '') return;
-        loginQrCodeCheck(this.qrCodeKey).then(result => {
-          if (result.code === 800) {
-            this.getQrCodeKey(); // 重新生成QrCode
-            this.qrCodeInformation = '二维码已失效，请重新扫码';
-          } else if (result.code === 802) {
-            this.qrCodeInformation = '扫描成功，请在手机上确认登录';
-          } else if (result.code === 801) {
-            this.qrCodeInformation = '打开网易云音乐APP扫码登录';
-          } else if (result.code === 803) {
-            clearInterval(this.qrCodeCheckInterval);
-            this.qrCodeInformation = '登录成功，请稍等...';
-            result.code = 200;
-            result.cookie = result.cookie.replaceAll(' HTTPOnly', '');
-            this.handleLoginResponse(result);
-          }
-        });
-      }, 1000);
+      
+      if (this.useCustomQRLogin) {
+        // 使用自定义二维码登录检查
+        this.qrCodeCheckInterval = setInterval(() => {
+          if (this.qrCodeKey === '') return;
+          
+          checkQRCodeStatus(this.qrCodeKey, this.qrApiData)
+            .then(result => {
+              if (result.code === 800) {
+                this.getQrCodeKey(); // 重新生成QrCode
+                this.qrCodeInformation = '二维码已失效，请重新扫码';
+              } else if (result.code === 802) {
+                this.qrCodeInformation = '扫描成功，请在手机上确认登录';
+              } else if (result.code === 801) {
+                this.qrCodeInformation = '打开网易云音乐APP扫码登录';
+              } else if (result.code === 803) {
+                clearInterval(this.qrCodeCheckInterval);
+                this.qrCodeInformation = '登录成功，请稍等...';
+                
+                // 处理自定义登录成功的响应
+                const loginResult = {
+                  code: 200,
+                  cookie: result.cookieString || result.cookies?.map(c => `${c.name}=${c.value}`).join('; ') || ''
+                };
+                
+                console.log('[Login] 自定义二维码登录成功');
+                console.log('[Login] Cookies:', result.keyCookies);
+                
+                this.handleLoginResponse(loginResult);
+              }
+            })
+            .catch(error => {
+              console.error('[Login] 检查二维码状态失败:', error);
+            });
+        }, 1000);
+      } else {
+        // 使用默认二维码登录检查
+        this.qrCodeCheckInterval = setInterval(() => {
+          if (this.qrCodeKey === '') return;
+          loginQrCodeCheck(this.qrCodeKey).then(result => {
+            if (result.code === 800) {
+              this.getQrCodeKey(); // 重新生成QrCode
+              this.qrCodeInformation = '二维码已失效，请重新扫码';
+            } else if (result.code === 802) {
+              this.qrCodeInformation = '扫描成功，请在手机上确认登录';
+            } else if (result.code === 801) {
+              this.qrCodeInformation = '打开网易云音乐APP扫码登录';
+            } else if (result.code === 803) {
+              clearInterval(this.qrCodeCheckInterval);
+              this.qrCodeInformation = '登录成功，请稍等...';
+              result.code = 200;
+              result.cookie = result.cookie.replaceAll(' HTTPOnly', '');
+              this.handleLoginResponse(result);
+            }
+          });
+        }, 1000);
+      }
     },
     changeMode(mode) {
       this.mode = mode;

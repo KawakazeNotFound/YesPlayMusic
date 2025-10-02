@@ -320,4 +320,97 @@ export function initIpcMain(win, store, trayEventEmitter) {
       trayEventEmitter.emit('updateLikeState', isLiked);
     });
   }
+
+  // QR 登录相关的 IPC 处理器
+  let qrLoginModuleCache = null;
+  let qrApiInstanceCache = null;
+
+  ipcMain.handle('qr-login-generate', async () => {
+    try {
+      log('qr-login-generate: 生成二维码');
+      
+      // 动态加载 qr-login-test 模块
+      if (!qrLoginModuleCache) {
+        const path = require('path');
+        const modulePath = path.join(__dirname, '../../test/qr-login-test.js');
+        qrLoginModuleCache = require(modulePath);
+      }
+
+      const result = await qrLoginModuleCache.generateQRCodeForLogin();
+      
+      if (result.success && result.data) {
+        // 序列化 API 实例的关键数据
+        const apiInstance = result.data.api;
+        qrApiInstanceCache = {
+          sDeviceId: apiInstance.sDeviceId,
+          globalCookies: apiInstance.globalCookies,
+          uniKey: apiInstance.uniKey
+        };
+
+        // 返回不包含 api 实例的数据
+        return {
+          success: true,
+          data: {
+            unikey: result.data.unikey,
+            qrcodeUrl: result.data.qrcodeUrl,
+            qrcodeSvg: result.data.qrcodeSvg,
+            apiData: qrApiInstanceCache
+          }
+        };
+      }
+
+      return result;
+    } catch (error) {
+      log(`qr-login-generate error: ${error.message}`);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
+  ipcMain.handle('qr-login-check', async (event, { apiData, unikey }) => {
+    try {
+      log('qr-login-check: 检查二维码状态');
+
+      if (!qrLoginModuleCache) {
+        const path = require('path');
+        const modulePath = path.join(__dirname, '../../test/qr-login-test.js');
+        qrLoginModuleCache = require(modulePath);
+      }
+
+      // 恢复 API 实例
+      const api = new qrLoginModuleCache.NeteaseAPITest();
+      if (apiData) {
+        api.sDeviceId = apiData.sDeviceId;
+        api.globalCookies = apiData.globalCookies || [];
+        api.uniKey = apiData.uniKey || unikey;
+      }
+
+      const result = await qrLoginModuleCache.checkQRCodeStatus(api, unikey);
+      
+      // 更新缓存的 API 实例数据
+      if (result.code === 803 && result.cookies) {
+        qrApiInstanceCache = {
+          sDeviceId: api.sDeviceId,
+          globalCookies: api.globalCookies,
+          uniKey: api.uniKey
+        };
+      }
+
+      return result;
+    } catch (error) {
+      log(`qr-login-check error: ${error.message}`);
+      return {
+        code: 0,
+        message: '检查状态失败: ' + error.message,
+        error: error.message
+      };
+    }
+  });
+
+  ipcMain.on('qr-login-clear', () => {
+    log('qr-login-clear: 清除缓存');
+    qrApiInstanceCache = null;
+  });
 }
