@@ -127,27 +127,28 @@ export default {
       });
 
       // 构建 cookie 字符串，格式需要与网易云 API 返回的格式一致
-      // 不设置 Domain，让浏览器自动处理，但必须设置 Path
-      // 网易云API接受的格式为分号分隔的cookie键值对
+      // 注意：在非 music.163.com 域名下，document.cookie 无法设置跨域 cookie
+      // 但 localStorage 可以正常使用，getCookie 函数会从 localStorage 读取
+      // 所以只需要构建格式正确的 cookie 字符串给 setCookies 处理即可
       const cookieArray = [];
 
       if (this.cookies.MUSIC_U.trim()) {
-        const musicUCookie = `MUSIC_U=${this.cookies.MUSIC_U.trim()}; Path=/; Domain=.music.163.com; Max-Age=2147483647`;
+        const musicUCookie = `MUSIC_U=${this.cookies.MUSIC_U.trim()}; Path=/`;
         cookieArray.push(musicUCookie);
         console.log('[Cookie Import] 添加 MUSIC_U Cookie');
       }
       if (this.cookies.__csrf.trim()) {
-        const csrfCookie = `__csrf=${this.cookies.__csrf.trim()}; Path=/; Domain=.music.163.com`;
+        const csrfCookie = `__csrf=${this.cookies.__csrf.trim()}; Path=/`;
         cookieArray.push(csrfCookie);
         console.log('[Cookie Import] 添加 __csrf Cookie');
       }
       if (this.cookies.MUSIC_A_T.trim()) {
-        const musicATCookie = `MUSIC_A_T=${this.cookies.MUSIC_A_T.trim()}; Path=/; Domain=.music.163.com; Max-Age=2147483647`;
+        const musicATCookie = `MUSIC_A_T=${this.cookies.MUSIC_A_T.trim()}; Path=/`;
         cookieArray.push(musicATCookie);
         console.log('[Cookie Import] 添加 MUSIC_A_T Cookie');
       }
       if (this.cookies.MUSIC_R_T.trim()) {
-        const musicRTCookie = `MUSIC_R_T=${this.cookies.MUSIC_R_T.trim()}; Path=/; Domain=.music.163.com; Max-Age=2147483647`;
+        const musicRTCookie = `MUSIC_R_T=${this.cookies.MUSIC_R_T.trim()}; Path=/`;
         cookieArray.push(musicRTCookie);
         console.log('[Cookie Import] 添加 MUSIC_R_T Cookie');
       }
@@ -266,36 +267,8 @@ export default {
           getCookie('__csrf') ? '***存在***' : '不存在'
         );
 
-        // 测试直接调用用户账户 API
-        console.log('[Cookie Import] 步骤 6.5: 测试 userAccount API');
-        const { userAccount } = require('@/api/user');
-
-        const testAPI = async () => {
-          try {
-            const testResult = await userAccount();
-            console.log('[Cookie Import] 直接 API 测试结果:', testResult);
-
-            if (!testResult || testResult.code !== 200 || !testResult.profile) {
-              console.warn('[Cookie Import] API 测试失败，可能 Cookie 无效');
-              throw new Error(
-                `API 测试失败 - code: ${
-                  testResult?.code
-                }, profile: ${!!testResult?.profile}`
-              );
-            }
-            console.log('[Cookie Import] API 测试成功！');
-            return testResult;
-          } catch (apiError) {
-            console.error('[Cookie Import] API 测试异常:', apiError);
-            throw new Error(`API 测试异常: ${apiError.message}`);
-          }
-        };
-
-        // 执行 API 测试
-        await testAPI();
-
         console.log('[Cookie Import] 步骤 7: 获取用户信息');
-        // 获取用户信息
+        // 获取用户信息（通过原项目的后端API）
         this.$store
           .dispatch('fetchUserProfile')
           .then(result => {

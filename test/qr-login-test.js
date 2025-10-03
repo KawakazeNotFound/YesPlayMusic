@@ -20,11 +20,11 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         this.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0';
         this.globalCookies = [];
         
-        // 初始化 sDeviceId (按照 go-musicfox 逻辑)
+        // 初始化 sDeviceId
         this.sDeviceId = this.generateSDeviceId();
     }
 
-    // 生成 sDeviceId，按照 go-musicfox 的 GenerateSDeviceId 逻辑
+    // 生成 sDeviceId，
     generateSDeviceId() {
         const randomNum = Math.floor(Math.random() * 1000000);
         return `unknown-${randomNum}`;

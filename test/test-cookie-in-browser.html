@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie 导入测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .warning {
+            color: #FF9800;
+            font-weight: bold;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .cookie-value {
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            background: #efefef;
+            padding: 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍪 Cookie 导入功能测试</h1>
+        
+        <div class="test-section">
+            <h2>1. 手动输入 Cookie</h2>
+            <div style="margin: 15px 0;">
+                <label for="music_u"><strong>MUSIC_U</strong> (必填):</label><br>
+                <input type="text" id="music_u" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;" placeholder="输入 MUSIC_U 的值">
+            </div>
+            <div style="margin: 15px 0;">
+                <label for="csrf"><strong>__csrf</strong> (可选):</label><br>
+                <input type="text" id="csrf" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;" placeholder="输入 __csrf 的值">
+            </div>
+            <div style="margin: 15px 0;">
+                <label for="music_a_t"><strong>MUSIC_A_T</strong> (可选):</label><br>
+                <input type="text" id="music_a_t" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;" placeholder="输入 MUSIC_A_T 的值">
+            </div>
+            <div style="margin: 15px 0;">
+                <label for="music_r_t"><strong>MUSIC_R_T</strong> (可选):</label><br>
+                <input type="text" id="music_r_t" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px;" placeholder="输入 MUSIC_R_T 的值">
+            </div>
+            <button onclick="importManualCookies()">手动导入 Cookie</button>
+            <button onclick="loadTestData()" style="background: #2196F3;">或：从 JSON 文件加载</button>
+            <div id="load-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. 执行导入</h2>
+            <p style="color: #666; font-size: 14px;">点击上面的按钮后会自动导入</p>
+            <div id="import-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. 验证 Cookie 存储</h2>
+            <button onclick="verifyCookies()">检查存储状态</button>
+            <div id="verify-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. 测试 getCookie 函数</h2>
+            <button onclick="testGetCookie()">测试读取</button>
+            <div id="getcookie-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. 测试 API 请求</h2>
+            <button onclick="testAPIRequest()">调用后端 API</button>
+            <div id="api-result"></div>
+        </div>
+    </div>
+
+    <script>
+        let testCookies = null;
+        const baseURL = 'http://localhost:10754';
+
+        // 从手动输入导入
+        function importManualCookies() {
+            const musicU = document.getElementById('music_u').value.trim();
+            const csrf = document.getElementById('csrf').value.trim();
+            const musicAT = document.getElementById('music_a_t').value.trim();
+            const musicRT = document.getElementById('music_r_t').value.trim();
+            
+            const result = document.getElementById('import-result');
+            
+            if (!musicU) {
+                result.innerHTML = '<p class="error">❌ MUSIC_U 是必填项</p>';
+                return;
+            }
+            
+            // 构建 cookie 数组
+            testCookies = [];
+            if (musicU) testCookies.push({ name: 'MUSIC_U', value: musicU });
+            if (csrf) testCookies.push({ name: '__csrf', value: csrf });
+            if (musicAT) testCookies.push({ name: 'MUSIC_A_T', value: musicAT });
+            if (musicRT) testCookies.push({ name: 'MUSIC_R_T', value: musicRT });
+            
+            importCookies();
+        }
+
+        // 模拟 setCookies 函数
+        function setCookies(string) {
+            console.log('[setCookies] 开始设置 cookies, 输入字符串长度:', string.length);
+            const cookies = string.split(';;');
+            console.log('[setCookies] 分割后得到', cookies.length, '个 cookie');
+
+            cookies.map((cookie, index) => {
+                console.log(`[setCookies] 设置第 ${index + 1} 个 cookie:`, cookie.substring(0, 50) + '...');
+
+                try {
+                    // 设置到浏览器 cookie
+                    document.cookie = cookie;
+                    console.log(`[setCookies] 浏览器 cookie 设置完成`);
+
+                    // 解析并设置到 localStorage
+                    const cookieKeyValue = cookie.split(';')[0].split('=');
+                    const key = cookieKeyValue[0];
+                    const value = cookieKeyValue[1];
+
+                    console.log(`[setCookies] 解析得到 key: ${key}, value 长度: ${value?.length || 0}`);
+                    localStorage.setItem(`cookie-${key}`, value);
+                    console.log(`[setCookies] localStorage 设置完成: cookie-${key}`);
+
+                    // 验证设置结果
+                    const checkBrowser = document.cookie.includes(key);
+                    const checkLocalStorage = !!localStorage.getItem(`cookie-${key}`);
+                    console.log(`[setCookies] 验证结果 - 浏览器: ${checkBrowser}, localStorage: ${checkLocalStorage}`);
+                } catch (error) {
+                    console.error(`[setCookies] 设置第 ${index + 1} 个 cookie 失败:`, error);
+                }
+            });
+
+            console.log('[setCookies] 所有 cookie 设置完成');
+        }
+
+        // 模拟 getCookie 函数
+        function getCookie(key) {
+            // 从 document.cookie 获取
+            const browserValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith(key + '='))
+                ?.split('=')[1];
+            
+            // 从 localStorage 获取
+            const localStorageValue = localStorage.getItem(`cookie-${key}`);
+            
+            const result = browserValue || localStorageValue;
+            
+            console.log(`[getCookie] 获取 ${key}:`, {
+                browser: browserValue ? '存在' : '不存在',
+                localStorage: localStorageValue ? '存在' : '不存在',
+                result: result ? '存在' : '不存在',
+            });
+            
+            return result;
+        }
+
+        async function loadTestData() {
+            const result = document.getElementById('load-result');
+            result.innerHTML = '<p>正在加载...</p>';
+            
+            try {
+                const response = await fetch('login-success.json');
+                const data = await response.json();
+                testCookies = data.cookies;
+                
+                result.innerHTML = `
+                    <p class="success">✅ 成功加载测试数据</p>
+                    <p>Cookie 数量: ${testCookies.length}</p>
+                    <ul>
+                        ${testCookies.map(c => `<li><strong>${c.name}</strong>: ${c.value.substring(0, 30)}...</li>`).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ 加载失败: ${error.message}</p>`;
+            }
+        }
+
+        function importCookies() {
+            const result = document.getElementById('import-result');
+            
+            if (!testCookies) {
+                result.innerHTML = '<p class="error">❌ 请先加载测试数据</p>';
+                return;
+            }
+            
+            // 构建 cookie 字符串
+            const cookieArray = [];
+            testCookies.forEach(c => {
+                cookieArray.push(`${c.name}=${c.value}; Path=/`);
+            });
+            
+            const cookieString = cookieArray.join(';;');
+            
+            result.innerHTML = '<p>正在导入...</p>';
+            
+            try {
+                setCookies(cookieString);
+                result.innerHTML = `
+                    <p class="success">✅ Cookie 导入完成</p>
+                    <p>导入了 ${testCookies.length} 个 cookie</p>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ 导入失败: ${error.message}</p>`;
+            }
+        }
+
+        function verifyCookies() {
+            const result = document.getElementById('verify-result');
+            
+            if (!testCookies) {
+                result.innerHTML = '<p class="error">❌ 请先加载并导入测试数据</p>';
+                return;
+            }
+            
+            let html = '<h3>存储状态检查：</h3>';
+            
+            testCookies.forEach(c => {
+                const inBrowser = document.cookie.includes(c.name);
+                const inLocalStorage = !!localStorage.getItem(`cookie-${c.name}`);
+                const value = localStorage.getItem(`cookie-${c.name}`);
+                
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                        <strong>${c.name}</strong>:
+                        <ul>
+                            <li>document.cookie: ${inBrowser ? '<span class="success">✅ 存在</span>' : '<span class="error">❌ 不存在</span>'}</li>
+                            <li>localStorage: ${inLocalStorage ? '<span class="success">✅ 存在</span>' : '<span class="error">❌ 不存在</span>'}</li>
+                            ${value ? `<li class="cookie-value">值: ${value.substring(0, 50)}...</li>` : ''}
+                        </ul>
+                    </div>
+                `;
+            });
+            
+            result.innerHTML = html;
+        }
+
+        function testGetCookie() {
+            const result = document.getElementById('getcookie-result');
+            
+            if (!testCookies) {
+                result.innerHTML = '<p class="error">❌ 请先加载并导入测试数据</p>';
+                return;
+            }
+            
+            let html = '<h3>getCookie 函数测试：</h3>';
+            
+            testCookies.forEach(c => {
+                const value = getCookie(c.name);
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                        <strong>${c.name}</strong>: 
+                        ${value ? `<span class="success">✅ 可以读取</span>` : '<span class="error">❌ 读取失败</span>'}
+                        ${value ? `<div class="cookie-value">${value.substring(0, 50)}...</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            result.innerHTML = html;
+        }
+
+        async function testAPIRequest() {
+            const result = document.getElementById('api-result');
+            result.innerHTML = '<p>正在测试...</p>';
+            
+            try {
+                // 获取所有 cookie
+                const cookieParts = [];
+                if (testCookies) {
+                    testCookies.forEach(c => {
+                        const value = getCookie(c.name);
+                        if (value) {
+                            cookieParts.push(`${c.name}=${value}`);
+                        }
+                    });
+                }
+                
+                const cookieString = cookieParts.join('; ');
+                
+                if (!cookieString) {
+                    result.innerHTML = '<p class="error">❌ 没有可用的 cookie</p>';
+                    return;
+                }
+                
+                const url = `${baseURL}/user/account?cookie=${encodeURIComponent(cookieString)}&timestamp=${Date.now()}`;
+                
+                result.innerHTML = `<p>正在调用: ${baseURL}/user/account</p>`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <p class="success">✅ API 调用成功</p>
+                    <p>响应状态: ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ API 调用失败: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

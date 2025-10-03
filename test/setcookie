@@ -1,0 +1,89 @@
+(async () => {
+    /* ====== 脚本作者Github LuorixDev GPL3 ====== */
+    /* ====== 替换为你自己的 Cookie 字符串 ====== */
+    const newCookieString = `请替换这里`; // ← 请替换这里！
+
+    /* === 0. 清除现有 Cookie === */
+    console.log("🚿 [0] 清空可写 Cookie …");
+    const currentCookies = document.cookie.split(";").filter(Boolean);
+    if (currentCookies.length === 0) {
+        console.log("⚪ 当前无可清除 Cookie。");
+    } else {
+        for (const kv of currentCookies) {
+            const name = kv.split("=")[0].trim();
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+            console.log("🗑️ 删除:", name);
+        }
+        console.log("✅ Cookie 清除完成（HttpOnly Cookie 不可移除）。");
+    }
+
+    /* === 1. 写入新 Cookie === */
+    console.log("📥 [1] 写入新 Cookie …");
+    const maxAgeSeconds = 60*60*24*15; 
+    for (const cookie of newCookieString.split(";")) {
+        const c = cookie.trim();
+        if (!c) continue;
+
+        const [key, ...rest] = c.split("=");
+        const value = rest.join("=");
+        if (!key || !value) continue;
+
+        const encoded = `${key}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}`;
+        document.cookie = encoded;
+        console.log("🍪 写入持久 Cookie:", encoded);
+
+        // 同步写入 localStorage
+        localStorage.setItem(`cookie-${key}`, value);
+        console.log(`💾 localStorage 写入: cookie-${key} = ${value}`);
+    }
+    console.log("✅ 新 Cookie 写入完成。");
+
+    /* === 2. 获取用户信息 === */
+    console.log("🌐 [2] 正在请求 /api/user/account …");
+    let payload;
+    try {
+        const res = await fetch("/api/user/account", { credentials: "include" });
+        payload = await res.json();
+        console.log("📦 返回数据:", payload);
+    } catch (e) {
+        console.error("❌ 请求失败:", e);
+        return;
+    }
+    if (payload.code !== 200 || !payload.profile) {
+        console.error("❌ 响应异常:", payload);
+        return;
+    }
+    const profile = payload.profile;
+    console.log(`✅ 获取成功，昵称: ${profile.nickname}`);
+
+    /* === 3. 更新 localStorage.data === */
+    console.log("📂 [3] 读取 localStorage.data …");
+    let oldData;
+    try {
+        oldData = JSON.parse(localStorage.getItem("data") || "{}");
+        console.log("📄 当前 data:", oldData);
+    } catch {
+        console.warn("⚠️ 当前 data 解析失败，将重置为空对象。");
+        oldData = {};
+    }
+
+    const newData = {
+        ...oldData,
+        user: profile,
+        loginMode: "account"
+    };
+
+    try {
+        localStorage.setItem("data", JSON.stringify(newData));
+        console.log("✅ [4] 新 data 写入完成:", newData);
+    } catch (e) {
+        console.error("❌ localStorage 写入失败:", e);
+        return;
+    }
+
+    /* === 5. 跳转至首页 === */
+    console.log("🏠 正在跳转到首页 …");
+    setTimeout(() => {
+        location.href = "/"; // 可改为你自己的首页路径
+    }, 1000); // 延迟 1 秒跳转
+})();

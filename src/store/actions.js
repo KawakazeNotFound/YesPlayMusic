@@ -63,7 +63,9 @@ export default {
   fetchLikedSongs: ({ state, commit }) => {
     if (!isLooseLoggedIn()) return;
     if (isAccountLoggedIn()) {
-      return userLikedSongsIDs({ uid: state.data.user.userId }).then(result => {
+      const uid =
+        state.data.user && (state.data.user.userId || state.data.user.id);
+      return userLikedSongsIDs({ uid: uid }).then(result => {
         if (result.ids) {
           commit('updateLikedXXX', {
             name: 'songs',
@@ -104,8 +106,17 @@ export default {
   fetchLikedPlaylist: ({ state, commit }) => {
     if (!isLooseLoggedIn()) return;
     if (isAccountLoggedIn()) {
+      // 兼容两种数据结构：profile.userId 或 account.id
+      const uid =
+        state.data.user && (state.data.user.userId || state.data.user.id);
+
+      if (!uid) {
+        console.error('[fetchLikedPlaylist] 无法获取用户ID');
+        return Promise.reject(new Error('用户ID不存在'));
+      }
+
       return userPlaylist({
-        uid: state.data.user && state.data.user.userId,
+        uid: uid,
         limit: 2000, // 最多只加载2000个歌单（等有用户反馈问题再修）
         timestamp: new Date().getTime(),
       }).then(result => {
@@ -172,13 +183,15 @@ export default {
   },
   fetchPlayHistory: ({ state, commit }) => {
     if (!isAccountLoggedIn()) return;
+    const uid =
+      state.data.user && (state.data.user.userId || state.data.user.id);
     return Promise.all([
       userPlayHistory({
-        uid: state.data.user && state.data.user.userId,
+        uid: uid,
         type: 0,
       }),
       userPlayHistory({
-        uid: state.data.user && state.data.user.userId,
+        uid: uid,
         type: 1,
       }),
     ]).then(result => {
@@ -218,15 +231,26 @@ export default {
       .then(result => {
         console.log('[fetchUserProfile] userAccount API 响应:', {
           code: result.code,
+          hasAccount: !!result.account,
           hasProfile: !!result.profile,
+          accountKeys: result.account ? Object.keys(result.account) : [],
           profileKeys: result.profile ? Object.keys(result.profile) : [],
-          userId: result.profile?.userId,
-          nickname: result.profile?.nickname,
+          userId: result.profile?.userId || result.account?.id,
+          nickname: result.profile?.nickname || result.account?.userName,
         });
 
         if (result.code === 200) {
           console.log('[fetchUserProfile] 用户信息获取成功，更新 store');
-          commit('updateData', { key: 'user', value: result.profile });
+          // 后端API返回的数据结构：{ code: 200, account: {...}, profile: {...} }
+          // 优先使用 profile，如果不存在则使用 account
+          const userProfile = result.profile || result.account;
+
+          if (!userProfile) {
+            console.error('[fetchUserProfile] 返回数据中没有用户信息');
+            throw new Error('用户信息为空');
+          }
+
+          commit('updateData', { key: 'user', value: userProfile });
           return result;
         } else {
           console.error(
