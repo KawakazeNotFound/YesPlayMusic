@@ -1,6 +1,6 @@
 <template>
   <div v-show="show" ref="library">
-    <h1>
+    <h1 v-if="data.user">
       <img
         class="avatar"
         :src="data.user.avatarUrl | resizeImage"
@@ -283,7 +283,8 @@ export default {
     },
     filterPlaylists() {
       const playlists = this.liked.playlists.slice(1);
-      const userId = this.data.user.userId;
+      const userId = this.data.user && this.data.user.userId;
+      if (!userId) return playlists;
       if (this.playlistFilter === 'mine') {
         return playlists.filter(p => p.creator.userId === userId);
       } else if (this.playlistFilter === 'liked') {

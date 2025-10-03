@@ -57,6 +57,10 @@
         <svg-icon icon-class="settings" />
         {{ $t('library.userProfileMenu.settings') }}
       </div>
+      <div class="item" @click="openImportCookieModal">
+        <svg-icon icon-class="server" />
+        {{ $t('library.userProfileMenu.importCookie') }}
+      </div>
       <div v-if="!isLooseLoggedIn" class="item" @click="toLogin">
         <svg-icon icon-class="login" />
         {{ $t('login.login') }}
@@ -71,6 +75,11 @@
         {{ $t('nav.github') }}
       </div>
     </ContextMenu>
+
+    <ModalImportCookie
+      :show="showImportCookieModal"
+      :close="closeImportCookieModal"
+    />
   </div>
 </template>
 
@@ -86,6 +95,7 @@ import Win32Titlebar from '@/components/Win32Titlebar.vue';
 import LinuxTitlebar from '@/components/LinuxTitlebar.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import ButtonIcon from '@/components/ButtonIcon.vue';
+import ModalImportCookie from '@/components/ModalImportCookie.vue';
 
 export default {
   name: 'Navbar',
@@ -94,6 +104,7 @@ export default {
     LinuxTitlebar,
     ButtonIcon,
     ContextMenu,
+    ModalImportCookie,
   },
   data() {
     return {
@@ -102,6 +113,7 @@ export default {
       keywords: '',
       enableWin32Titlebar: false,
       enableLinuxTitlebar: false,
+      showImportCookieModal: false,
     };
   },
   computed: {
@@ -110,8 +122,11 @@ export default {
       return isLooseLoggedIn();
     },
     avatarUrl() {
-      return this.data?.user?.avatarUrl && this.isLooseLoggedIn
-        ? `${this.data?.user?.avatarUrl}?param=512y512`
+      return this.data &&
+        this.data.user &&
+        this.data.user.avatarUrl &&
+        this.isLooseLoggedIn
+        ? `${this.data.user.avatarUrl}?param=512y512`
         : 'http://s4.music.126.net/style/web2/img/default/default_avatar.jpg?param=60y60';
     },
     hasCustomTitlebar() {
@@ -166,6 +181,12 @@ export default {
       } else {
         this.$router.push({ name: 'login' });
       }
+    },
+    openImportCookieModal() {
+      this.showImportCookieModal = true;
+    },
+    closeImportCookieModal() {
+      this.showImportCookieModal = false;
     },
   },
 };

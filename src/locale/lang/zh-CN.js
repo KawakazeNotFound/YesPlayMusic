@@ -36,6 +36,7 @@ export default {
     userProfileMenu: {
       settings: '设置',
       logout: '登出',
+      importCookie: '导入 Cookie',
     },
   },
   explore: {
@@ -119,6 +120,26 @@ export default {
   },
   modal: {
     close: '关闭',
+    importCookie: {
+      title: '导入 Cookie',
+      description:
+        '通过导入网易云音乐的 Cookie 来登录账号。Cookie 信息会存储在本地，不会上传到任何服务器。',
+      required: '必填',
+      optional: '可选',
+      musicURequired: '请输入 MUSIC_U 的值',
+      importFailed: 'Cookie 导入失败，请检查输入的值是否正确',
+      cancel: '取消',
+      confirm: '导入',
+      tips: {
+        title: '如何获取 Cookie？',
+        step1:
+          '在电脑上打开<a href="https://music.163.com" target="_blank">网易云音乐网页版</a>并登录',
+        step2: '按 F12 打开开发者工具，切换到 Network（网络）标签',
+        step3: '刷新页面，选择任意请求，在请求头中找到 Cookie',
+        step4:
+          '复制 Cookie 中的 <code>MUSIC_U</code> 等字段的值粘贴到对应输入框',
+      },
+    },
   },
   search: {
     artist: '艺人',
@@ -245,6 +266,28 @@ export default {
     cardiacMode: '心动模式',
     copyLyric: '复制歌词',
     copyLyricWithTranslation: '复制歌词（含翻译）',
+  },
+
+  importCookie: {
+    title: '导入 Cookie',
+    description:
+      '导入网易云音乐 Cookie，以绕过扫码登录限制。请从网页版网易云音乐获取相关 Cookie。',
+    required: '必填',
+    optional: '选填',
+    tips: {
+      title: '如何获取 Cookie',
+      step1:
+        '1. 登录 <a href="https://music.163.com" target="_blank">网易云音乐网页版</a>',
+      step2:
+        '2. 按 F12 打开开发者工具，切换到 Application (应用) 或 Storage (存储) 标签页',
+      step3: '3. 在左侧找到 Cookies，然后选择 music.163.com',
+      step4:
+        '4. 在右侧找到名为 MUSIC_U、__csrf、MUSIC_A_T、MUSIC_R_T 的 Cookie，将值复制到相应输入框',
+    },
+    cancel: '取消',
+    confirm: '导入',
+    musicURequired: 'MUSIC_U 为必填项，请填写',
+    importFailed: '导入失败',
   },
   toast: {
     savedToPlaylist: '已添加到歌单',

@@ -12,6 +12,9 @@ import '@/assets/css/global.scss';
 import NProgress from 'nprogress';
 import '@/assets/css/nprogress.css';
 
+// 确保token文件存在，避免API调用错误
+import '@/utils/checkAuthToken';
+
 window.resetApp = () => {
   localStorage.clear();
   indexedDB.deleteDatabase('yesplaymusic');

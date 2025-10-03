@@ -1,4 +1,8 @@
 'use strict';
+
+// 确保在应用启动前创建必要的token文件
+import './utils/checkAuthToken';
+
 import {
   app,
   protocol,

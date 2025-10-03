@@ -21,14 +21,43 @@ const service = axios.create({
 });
 
 service.interceptors.request.use(function (config) {
+  console.log(
+    `[Request] 发起 API 请求: ${config.method?.toUpperCase()} ${config.url}`
+  );
+
   if (!config.params) config.params = {};
   if (baseURL.length) {
-    if (
-      baseURL[0] !== '/' &&
-      !process.env.IS_ELECTRON &&
-      getCookie('MUSIC_U') !== null
-    ) {
-      config.params.cookie = `MUSIC_U=${getCookie('MUSIC_U')};`;
+    const musicU = getCookie('MUSIC_U');
+    const csrf = getCookie('__csrf');
+    const musicAT = getCookie('MUSIC_A_T');
+    const musicRT = getCookie('MUSIC_R_T');
+
+    console.log(`[Request] Cookie 检查:`, {
+      MUSIC_U: musicU ? '***存在***' : '不存在',
+      __csrf: csrf ? '***存在***' : '不存在',
+      MUSIC_A_T: musicAT ? '***存在***' : '不存在',
+      MUSIC_R_T: musicRT ? '***存在***' : '不存在',
+    });
+
+    if (baseURL[0] !== '/' && !process.env.IS_ELECTRON && musicU !== null) {
+      // 构建完整的 Cookie 字符串，包含所有可用的 Cookie
+      const cookieParts = [];
+      if (musicU) cookieParts.push(`MUSIC_U=${musicU}`);
+      if (csrf) cookieParts.push(`__csrf=${csrf}`);
+      if (musicAT) cookieParts.push(`MUSIC_A_T=${musicAT}`);
+      if (musicRT) cookieParts.push(`MUSIC_R_T=${musicRT}`);
+
+      config.params.cookie = cookieParts.join('; ') + ';';
+      console.log(
+        `[Request] 添加完整 cookie 参数到请求:`,
+        config.params.cookie
+      );
+    } else {
+      console.log(
+        `[Request] 跳过 cookie 参数 - baseURL: ${baseURL[0]}, isElectron: ${
+          process.env.IS_ELECTRON
+        }, musicU: ${!!musicU}`
+      );
     }
   } else {
     console.error("You must set up the baseURL in the service's config");
@@ -36,7 +65,10 @@ service.interceptors.request.use(function (config) {
 
   if (!process.env.IS_ELECTRON && !config.url.includes('/login')) {
     config.params.realIP = '211.161.244.70';
+    console.log(`[Request] 添加 realIP 参数`);
   }
+
+  console.log(`[Request] 最终请求参数:`, config.params);
 
   // Force real_ip
   const enableRealIP = JSON.parse(
@@ -59,10 +91,30 @@ service.interceptors.request.use(function (config) {
 
 service.interceptors.response.use(
   response => {
+    console.log(
+      `[Response] API 响应成功: ${response.config?.method?.toUpperCase()} ${
+        response.config?.url
+      }`,
+      {
+        status: response.status,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        hasCode: 'code' in (response.data || {}),
+        code: response.data?.code,
+      }
+    );
+
     const res = response.data;
     return res;
   },
   async error => {
+    console.error(`[Response] API 响应错误:`, {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      errorMessage: error.message,
+    });
+
     /** @type {import('axios').AxiosResponse | null} */
     let response;
     let data;
@@ -73,6 +125,7 @@ service.interceptors.response.use(
     } else if (error.response) {
       response = error.response;
       data = response.data;
+      console.error(`[Response] 错误响应数据:`, data);
     }
 
     if (

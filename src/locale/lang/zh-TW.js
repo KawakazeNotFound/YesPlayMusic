@@ -36,6 +36,7 @@ export default {
     userProfileMenu: {
       settings: '設定',
       logout: '登出',
+      importCookie: '匯入 Cookie',
     },
   },
   explore: {
@@ -115,6 +116,25 @@ export default {
   },
   modal: {
     close: '關閉',
+    importCookie: {
+      title: '匯入 Cookie',
+      description:
+        '通過匯入網易雲音樂的 Cookie 來登入帳號。Cookie 資訊會存儲在本機，不會上傳到任何伺服器。',
+      required: '必填',
+      optional: '可選',
+      musicURequired: '請輸入 MUSIC_U 的值',
+      importFailed: 'Cookie 匯入失敗，請檢查輸入的值是否正確',
+      cancel: '取消',
+      confirm: '匯入',
+      tips: {
+        title: '如何取得 Cookie？',
+        step1:
+          '在電腦上開啟<a href="https://music.163.com" target="_blank">網易雲音樂網頁版</a>並登入',
+        step2: '按 F12 開啟開發者工具，切換到 Network（網路）標籤',
+        step3: '重新整理頁面，選擇任意請求，在請求標頭中找到 Cookie',
+        step4: '複製 Cookie 中的 <code>MUSIC_U</code> 等欄位的值貼到對應輸入框',
+      },
+    },
   },
   search: {
     artist: '藝人',

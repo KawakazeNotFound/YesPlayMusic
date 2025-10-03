@@ -39,6 +39,7 @@ export default {
     userProfileMenu: {
       settings: 'Settings',
       logout: 'Logout',
+      importCookie: 'Import Cookie',
     },
   },
   explore: {
@@ -118,6 +119,28 @@ export default {
   },
   modal: {
     close: 'Close',
+    importCookie: {
+      title: 'Import Cookie',
+      description:
+        'Login by importing NetEase Cloud Music cookies. Cookie information will be stored locally and not uploaded to any server.',
+      required: 'Required',
+      optional: 'Optional',
+      musicURequired: 'Please enter the MUSIC_U value',
+      importFailed:
+        'Cookie import failed, please check if the values are correct',
+      cancel: 'Cancel',
+      confirm: 'Import',
+      tips: {
+        title: 'How to get cookies?',
+        step1:
+          'Open <a href="https://music.163.com" target="_blank">NetEase Cloud Music website</a> and login',
+        step2: 'Press F12 to open developer tools, switch to Network tab',
+        step3:
+          'Refresh the page, select any request, find Cookie in request headers',
+        step4:
+          'Copy the values of <code>MUSIC_U</code> and other fields from Cookie and paste them into corresponding input boxes',
+      },
+    },
   },
   search: {
     artist: 'Artists',

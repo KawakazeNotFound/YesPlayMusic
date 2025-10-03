@@ -656,14 +656,20 @@ async function testUserLikedMusic() {
 
       if (playlistResult.code && playlistResult.code === 200) {
         console.log('✅ 用户歌单获取成功');
-        console.log('歌单数量:', (playlistResult.playlist && playlistResult.playlist.length) || 0);
+        console.log(
+          '歌单数量:',
+          (playlistResult.playlist && playlistResult.playlist.length) || 0
+        );
 
         // 找到"我喜欢的音乐"歌单（通常是第一个，并且creator.userId === uid）
-        const likedPlaylist = playlistResult.playlist && playlistResult.playlist.find(
-          p =>
-            p.creator && p.creator.userId === uid &&
-            (p.name === '我喜欢的音乐' || p.specialType === 5)
-        );
+        const likedPlaylist =
+          playlistResult.playlist &&
+          playlistResult.playlist.find(
+            p =>
+              p.creator &&
+              p.creator.userId === uid &&
+              (p.name === '我喜欢的音乐' || p.specialType === 5)
+          );
 
         if (likedPlaylist) {
           console.log('✅ 找到"我喜欢的音乐"歌单');

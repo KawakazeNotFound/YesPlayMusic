@@ -516,12 +516,32 @@ async function testQRLogin() {
                         
                         // 保存登录信息到文件
                         const loginInfoPath = path.join(__dirname, 'login-success.json');
-                        fs.writeFileSync(loginInfoPath, JSON.stringify({
+                        const loginInfo = {
                             timestamp: new Date().toISOString(),
                             loginData: status,
-                            cookies: api.globalCookies
-                        }, null, 2));
+                            cookies: api.globalCookies,
+                            ypmCookieString: (() => {
+                                // 生成 YesPlayMusic 项目需要的 ';;' 分隔 cookie 字符串
+                                const cookieArray = [];
+                                api.globalCookies.forEach(cookie => {
+                                    cookieArray.push(`${cookie.name}=${cookie.value}; path=/; domain=.music.163.com`);
+                                });
+                                return cookieArray.join(';;');
+                            })(),
+                            keyCookies: {
+                                MUSIC_U: api.globalCookies.find(c => c.name === 'MUSIC_U')?.value || '',
+                                __csrf: api.globalCookies.find(c => c.name === '__csrf')?.value || '',
+                                MUSIC_A_T: api.globalCookies.find(c => c.name === 'MUSIC_A_T')?.value || '',
+                                MUSIC_R_T: api.globalCookies.find(c => c.name === 'MUSIC_R_T')?.value || ''
+                            }
+                        };
+                        
+                        fs.writeFileSync(loginInfoPath, JSON.stringify(loginInfo, null, 2));
                         console.log(`\n登录信息已保存到: ${loginInfoPath}`);
+                        console.log('\n===== YesPlayMusic Cookie 格式 =====');
+                        console.log('请复制以下内容到 YesPlayMusic 的 Cookie 导入功能:');
+                        console.log(loginInfo.ypmCookieString);
+                        console.log('=====================================');
                         
                         return status;
                     case 800:
@@ -739,7 +759,17 @@ async function checkQRCodeStatus(api, unikey) {
         // 如果登录成功（code === 803），返回必要的 cookies
         if (status.code === 803) {
             result.cookies = api.globalCookies;
+            
+            // 生成标准的 '; ' 分隔 cookie 字符串
             result.cookieString = api.globalCookies.map(c => `${c.name}=${c.value}`).join('; ');
+            
+            // 生成 YesPlayMusic 项目需要的 ';;' 分隔 cookie 字符串
+            const cookieArray = [];
+            api.globalCookies.forEach(cookie => {
+                // 每个 cookie 添加基本的属性（模拟浏览器cookie格式）
+                cookieArray.push(`${cookie.name}=${cookie.value}; path=/; domain=.music.163.com`);
+            });
+            result.ypmCookieString = cookieArray.join(';;');
             
             // 提取关键 cookies
             const musicU = api.globalCookies.find(c => c.name === 'MUSIC_U');
@@ -755,6 +785,7 @@ async function checkQRCodeStatus(api, unikey) {
             };
             
             console.log('[QR LOGIN API] 登录成功，提取关键cookies');
+            console.log('[QR LOGIN API] YesPlayMusic格式cookie:', result.ypmCookieString.substring(0, 100) + '...');
         }
         
         return result;

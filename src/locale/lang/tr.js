@@ -39,6 +39,7 @@ export default {
     userProfileMenu: {
       settings: 'Ayarlar',
       logout: 'Çıkış Yap',
+      importCookie: 'Cookie İçe Aktar',
     },
   },
   explore: {
@@ -113,6 +114,29 @@ export default {
   },
   modal: {
     close: 'Kapat',
+    importCookie: {
+      title: 'Cookie İçe Aktar',
+      description:
+        'NetEase Cloud Music çerezlerini içe aktararak giriş yapın. Çerez bilgileri yerel olarak saklanır ve herhangi bir sunucuya yüklenmez.',
+      required: 'Gerekli',
+      optional: 'İsteğe bağlı',
+      musicURequired: 'Lütfen MUSIC_U değerini girin',
+      importFailed:
+        'Cookie içe aktarma başarısız, lütfen değerlerin doğru olup olmadığını kontrol edin',
+      cancel: 'İptal',
+      confirm: 'İçe Aktar',
+      tips: {
+        title: 'Cookie nasıl alınır?',
+        step1:
+          '<a href="https://music.163.com" target="_blank">NetEase Cloud Music web sitesini</a> açın ve giriş yapın',
+        step2:
+          "Geliştirici araçlarını açmak için F12'ye basın, Network sekmesine geçin",
+        step3:
+          "Sayfayı yenileyin, herhangi bir isteği seçin, istek başlıklarında Cookie'yi bulun",
+        step4:
+          "Cookie'den <code>MUSIC_U</code> ve diğer alanların değerlerini kopyalayın ve ilgili giriş kutularına yapıştırın",
+      },
+    },
   },
   search: {
     artist: 'Sanatçılar',

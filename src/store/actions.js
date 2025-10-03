@@ -1,5 +1,5 @@
 // import store, { state, dispatch, commit } from "@/store";
-import { isAccountLoggedIn, isLooseLoggedIn } from '@/utils/auth';
+import { isAccountLoggedIn, isLooseLoggedIn, getCookie } from '@/utils/auth';
 import { likeATrack } from '@/api/track';
 import { getPlaylistDetail } from '@/api/playlist';
 import { getTrackDetail } from '@/api/track';
@@ -78,7 +78,11 @@ export default {
   fetchLikedSongsWithDetails: ({ state, commit }) => {
     return getPlaylistDetail(state.data.likedSongPlaylistID, true).then(
       result => {
-        if (result.playlist?.trackIds?.length === 0) {
+        if (
+          result.playlist &&
+          result.playlist.trackIds &&
+          result.playlist.trackIds.length === 0
+        ) {
           return new Promise(resolve => {
             resolve();
           });
@@ -101,7 +105,7 @@ export default {
     if (!isLooseLoggedIn()) return;
     if (isAccountLoggedIn()) {
       return userPlaylist({
-        uid: state.data.user?.userId,
+        uid: state.data.user && state.data.user.userId,
         limit: 2000, // 最多只加载2000个歌单（等有用户反馈问题再修）
         timestamp: new Date().getTime(),
       }).then(result => {
@@ -169,8 +173,14 @@ export default {
   fetchPlayHistory: ({ state, commit }) => {
     if (!isAccountLoggedIn()) return;
     return Promise.all([
-      userPlayHistory({ uid: state.data.user?.userId, type: 0 }),
-      userPlayHistory({ uid: state.data.user?.userId, type: 1 }),
+      userPlayHistory({
+        uid: state.data.user && state.data.user.userId,
+        type: 0,
+      }),
+      userPlayHistory({
+        uid: state.data.user && state.data.user.userId,
+        type: 1,
+      }),
     ]).then(result => {
       const data = {};
       const dataType = { 0: 'allData', 1: 'weekData' };
@@ -190,12 +200,48 @@ export default {
       }
     });
   },
-  fetchUserProfile: ({ commit }) => {
-    if (!isAccountLoggedIn()) return;
-    return userAccount().then(result => {
-      if (result.code === 200) {
-        commit('updateData', { key: 'user', value: result.profile });
-      }
+  fetchUserProfile: ({ commit, state }) => {
+    console.log('[fetchUserProfile] 开始获取用户信息');
+    console.log('[fetchUserProfile] 当前登录状态检查:', {
+      isAccountLoggedIn: isAccountLoggedIn(),
+      loginMode: state.data.loginMode,
+      hasMUSIC_U: !!getCookie('MUSIC_U'),
     });
+
+    if (!isAccountLoggedIn()) {
+      console.warn('[fetchUserProfile] 用户未登录，跳过获取用户信息');
+      return Promise.reject(new Error('用户未登录'));
+    }
+
+    console.log('[fetchUserProfile] 调用 userAccount API');
+    return userAccount()
+      .then(result => {
+        console.log('[fetchUserProfile] userAccount API 响应:', {
+          code: result.code,
+          hasProfile: !!result.profile,
+          profileKeys: result.profile ? Object.keys(result.profile) : [],
+          userId: result.profile?.userId,
+          nickname: result.profile?.nickname,
+        });
+
+        if (result.code === 200) {
+          console.log('[fetchUserProfile] 用户信息获取成功，更新 store');
+          commit('updateData', { key: 'user', value: result.profile });
+          return result;
+        } else {
+          console.error(
+            '[fetchUserProfile] API 返回错误码:',
+            result.code,
+            result.msg || result.message
+          );
+          throw new Error(
+            `API 错误: ${result.code} - ${result.msg || result.message}`
+          );
+        }
+      })
+      .catch(error => {
+        console.error('[fetchUserProfile] 获取用户信息失败:', error);
+        throw error;
+      });
   },
 };
