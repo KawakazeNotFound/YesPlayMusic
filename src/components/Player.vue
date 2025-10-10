@@ -110,36 +110,17 @@
             @click.native="goToNextTracksPage"
             ><svg-icon icon-class="list"
           /></button-icon>
+          <!-- 统一的播放模式切换按钮 -->
           <button-icon
-            :class="{
-              active: player.repeatMode !== 'off',
-              disabled: player.isPersonalFM,
-            }"
-            :title="
-              player.repeatMode === 'one'
-                ? $t('player.repeatTrack')
-                : $t('player.repeat')
-            "
-            @click.native="switchRepeatMode"
+            :class="{ active: currentPlayMode.name !== 'order' }"
+            :title="currentPlayMode.label"
+            @click.native="cyclePlayMode"
           >
-            <svg-icon
-              v-show="player.repeatMode !== 'one'"
-              icon-class="repeat"
-            />
-            <svg-icon
-              v-show="player.repeatMode === 'one'"
-              icon-class="repeat-1"
-            />
+            <svg-icon :icon-class="currentPlayMode.icon" />
           </button-icon>
           <button-icon
-            :class="{ active: player.shuffle, disabled: player.isPersonalFM }"
-            :title="$t('player.shuffle')"
-            @click.native="switchShuffle"
-            ><svg-icon icon-class="shuffle"
-          /></button-icon>
-          <button-icon
-            v-if="settings.enableReversedMode"
-            :class="{ active: player.reversed, disabled: player.isPersonalFM }"
+            v-if="settings.enableReversedMode && !player.isPersonalFM"
+            :class="{ active: player.reversed }"
             :title="$t('player.reversed')"
             @click.native="switchReversed"
             ><svg-icon icon-class="sort-up"
@@ -216,6 +197,43 @@ export default {
         ? '音源来自酷我音乐'
         : '';
     },
+    // 当前播放模式信息
+    currentPlayMode() {
+      if (this.player.isPersonalFM) {
+        return {
+          name: 'personalFM',
+          icon: 'fm',
+          label: '私人FM',
+        };
+      }
+      if (this.player.shuffle) {
+        return {
+          name: 'shuffle',
+          icon: 'shuffle',
+          label: this.$t('player.shuffle'),
+        };
+      }
+      if (this.player.repeatMode === 'one') {
+        return {
+          name: 'repeat-one',
+          icon: 'repeat-1',
+          label: this.$t('player.repeatTrack'),
+        };
+      }
+      if (this.player.repeatMode === 'on') {
+        return {
+          name: 'repeat-on',
+          icon: 'repeat',
+          label: this.$t('player.repeat'),
+        };
+      }
+      // 默认：顺序播放
+      return {
+        name: 'order',
+        icon: 'play-in-order',
+        label: '顺序播放',
+      };
+    },
   },
   mounted() {
     this.setupMediaControls();
@@ -276,6 +294,47 @@ export default {
     },
     mute() {
       this.player.mute();
+    },
+    cyclePlayMode() {
+      const currentMode = this.currentPlayMode.name;
+
+      // 播放模式切换顺序：顺序播放 -> 列表循环 -> 单曲循环 -> 随机播放 -> 私人FM -> 顺序播放
+      switch (currentMode) {
+        case 'order':
+          // 顺序播放 -> 列表循环
+          this.player.repeatMode = 'on';
+          this.showToast(this.$t('player.repeat'));
+          break;
+        case 'repeat-on':
+          // 列表循环 -> 单曲循环
+          this.player.repeatMode = 'one';
+          this.showToast(this.$t('player.repeatTrack'));
+          break;
+        case 'repeat-one':
+          // 单曲循环 -> 随机播放
+          this.player.repeatMode = 'off';
+          this.player.shuffle = true;
+          this.showToast(this.$t('player.shuffle'));
+          break;
+        case 'shuffle':
+          // 随机播放 -> 私人FM
+          this.player.shuffle = false;
+          this.player.playPersonalFM();
+          this.showToast('私人FM');
+          break;
+        case 'personalFM':
+          // 私人FM -> 顺序播放
+          this.player._isPersonalFM = false;
+          this.player.repeatMode = 'off';
+          this.showToast('顺序播放');
+          break;
+        default:
+          // 默认切换到顺序播放
+          this.player._isPersonalFM = false;
+          this.player.repeatMode = 'off';
+          this.player.shuffle = false;
+          break;
+      }
     },
 
     setupMediaControls() {
