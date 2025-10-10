@@ -110,9 +110,20 @@
             @click.native="goToNextTracksPage"
             ><svg-icon icon-class="list"
           /></button-icon>
-          <!-- 统一的播放模式切换按钮 -->
+          <!-- 私人FM按钮 -->
           <button-icon
-            :class="{ active: currentPlayMode.name !== 'order' }"
+            :class="{ active: player.isPersonalFM }"
+            title="私人FM"
+            @click.native="togglePersonalFM"
+          >
+            <svg-icon icon-class="fm" />
+          </button-icon>
+          <!-- 统一的播放模式切换按钮(不包含私人FM) -->
+          <button-icon
+            :class="{
+              active: currentPlayMode.name !== 'order',
+              disabled: player.isPersonalFM,
+            }"
             :title="currentPlayMode.label"
             @click.native="cyclePlayMode"
           >
@@ -296,9 +307,15 @@ export default {
       this.player.mute();
     },
     cyclePlayMode() {
+      // 如果当前是私人FM，不允许通过此按钮切换模式
+      if (this.player.isPersonalFM) {
+        this.showToast('请先退出私人FM');
+        return;
+      }
+
       const currentMode = this.currentPlayMode.name;
 
-      // 播放模式切换顺序：顺序播放 -> 列表循环 -> 单曲循环 -> 随机播放 -> 私人FM -> 顺序播放
+      // 播放模式切换顺序：顺序播放 -> 列表循环 -> 单曲循环 -> 随机播放 -> 顺序播放
       switch (currentMode) {
         case 'order':
           // 顺序播放 -> 列表循环
@@ -317,23 +334,32 @@ export default {
           this.showToast(this.$t('player.shuffle'));
           break;
         case 'shuffle':
-          // 随机播放 -> 私人FM
+          // 随机播放 -> 顺序播放
           this.player.shuffle = false;
-          this.player.playPersonalFM();
-          this.showToast('私人FM');
-          break;
-        case 'personalFM':
-          // 私人FM -> 顺序播放
-          this.player._isPersonalFM = false;
           this.player.repeatMode = 'off';
           this.showToast('顺序播放');
           break;
         default:
           // 默认切换到顺序播放
-          this.player._isPersonalFM = false;
           this.player.repeatMode = 'off';
           this.player.shuffle = false;
+          this.showToast('顺序播放');
           break;
+      }
+    },
+    togglePersonalFM() {
+      if (this.player.isPersonalFM) {
+        // 退出私人FM，恢复到普通播放模式
+        this.player._isPersonalFM = false;
+        // 如果有播放列表，继续播放列表中的歌曲
+        if (this.player.list.length > 0) {
+          this.player.playOrPause();
+        }
+        this.showToast('已退出私人FM');
+      } else {
+        // 进入私人FM
+        this.player.playPersonalFM();
+        this.showToast('私人FM');
       }
     },
 
