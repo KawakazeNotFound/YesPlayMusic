@@ -118,6 +118,15 @@
           >
             <svg-icon icon-class="fm" />
           </button-icon>
+          <!-- 心动模式按钮 - 只在播放歌单时显示 -->
+          <button-icon
+            v-if="isPlaylistPlaying"
+            :class="{ disabled: player.isPersonalFM }"
+            :title="$t('contextMenu.cardiacMode')"
+            @click.native="startIntelligenceMode"
+          >
+            <svg-icon icon-class="intelligence" />
+          </button-icon>
           <!-- 统一的播放模式切换按钮(不包含私人FM) -->
           <button-icon
             :class="{
@@ -245,6 +254,14 @@ export default {
         label: '顺序播放',
       };
     },
+    // 判断当前是否在播放歌单（用于显示心动模式按钮）
+    isPlaylistPlaying() {
+      return (
+        !this.player.isPersonalFM &&
+        this.player.playlistSource?.type === 'playlist' &&
+        this.player.playlistSource?.id
+      );
+    },
   },
   mounted() {
     this.setupMediaControls();
@@ -361,6 +378,23 @@ export default {
         this.player.playPersonalFM();
         this.showToast('私人FM');
       }
+    },
+    startIntelligenceMode() {
+      if (this.player.isPersonalFM) {
+        this.showToast('私人FM模式下无法使用心动模式');
+        return;
+      }
+      if (!this.isPlaylistPlaying) {
+        this.showToast('请先播放歌单');
+        return;
+      }
+      // 基于当前歌单生成心动模式播放列表
+      const playlistId = this.player.playlistSource.id;
+      this.player.playIntelligenceListById(
+        playlistId,
+        this.player.currentTrackID
+      );
+      this.showToast(this.$t('contextMenu.cardiacMode'));
     },
 
     setupMediaControls() {
